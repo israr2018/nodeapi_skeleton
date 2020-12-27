@@ -14,7 +14,53 @@ class FeedbackController {
 
      }
     async getFeedbackByType(req,res,next){
+        console.log('%cfeedback-controller.js line:17 req.params.type', 'color: #007acc;', req.params.type);
+        const aggregate=[
+            {
+                $match:{
+                    "feedbackType":req.params.type
+                }
 
+            },
+            {
+                $lookup:{
+                    from:"users",
+                    let :{
+                        user_id:"$user"
+                    },
+                    pipeline:[
+                        {
+                            $match:{
+                                $expr: {
+                                    $eq: [{ $toString: "$_id" }, { $toString: "$$user_id" }],
+                                  },
+                                
+                            }
+                        }
+                    ],
+                    as:"user-info"
+
+                }
+                
+
+            },
+            {
+               $project:{
+                   "user":1,
+                   "_id":1,
+                   "feedback-by":{
+                    email:{$arrayElemAt:["$user-info.email",0]},
+                    firstName:{$arrayElemAt:["$user-info.firstName",0]},
+                    lastName:{$arrayElemAt:["$user-info.lastName",0]},
+                    _id:{$arrayElemAt:["$user-info._id",0]}
+                    
+
+                   }
+               } 
+            }
+        ];
+        let feedbackes=await FeedbackModel.aggregate(aggregate);
+        return res.status(200).json(feedbackes);
      }
      async getFeedbackById(req,res,next){
          try {
